@@ -1,0 +1,9 @@
+{
+  "error": "invalid_grant",
+  "error_description": "Token has been expired or revoked."
+}
+
+---
+Headers
+
+[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"Date","value":"Tue, 22 Jul 2025 15:49:35 GMT"},{"key":"Cache-Control","value":"no-cache, no-store, max-age=0, must-revalidate"},{"key":"Content-Type","value":"application/json; charset=utf-8"},{"key":"Alt-Svc","value":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"},{"key":"Transfer-Encoding","value":"chunked"},{"key":"X-Frame-Options","value":"SAMEORIGIN"},{"key":"Vary","value":"Origin"},{"key":"Content-Encoding","value":"gzip"},{"key":"Server","value":"scaffolding on HTTPServer2"},{"key":"Pragma","value":"no-cache"},{"key":"Expires","value":"Mon, 01 Jan 1990 00:00:00 GMT"},{"key":"X-XSS-Protection","value":"0"}]

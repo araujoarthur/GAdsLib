@@ -1,0 +1,16 @@
+[GAdsLib]
+accessToken=
+refreshToken=
+refreshTokenExpiryAt=
+accessTokenExpiryAt=
+clientID=
+clientSecret=
+customerID=
+loginCustomerID=
+developerToken=
+
+[database]
+username=
+password=
+address=
+path=
