@@ -19,9 +19,11 @@ type
     btnSerialize: TButton;
     edtQuery: TLabeledEdit;
     Button1: TButton;
+    Button2: TButton;
     procedure btnCreateGAdsClick(Sender: TObject);
     procedure btnSerializeClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -38,8 +40,7 @@ implementation
 
 procedure TForm1.btnCreateGAdsClick(Sender: TObject);
 begin
-  GAds := TGoogleAds.Create(edtClientID.Text, edtClientSecret.Text, edtRefreshToken.Text, edtCustomerID.Text, edtCustomerLoggedIn.Text, edtDevToken.Text);
-  Memo1.Text := GAds.GetLatestResponse;
+  GAds := TGoogleAds.Create('./cfg.ini');
 end;
 
 procedure TForm1.btnSerializeClick(Sender: TObject);
@@ -62,17 +63,23 @@ end;
 procedure TForm1.Button1Click(Sender: TObject);
 var
   Resp: TGAdsCampaigns;
-  Camp: TGAdsCampaignEntry;
-  Idx: Integer;
+  {Camp: TGAdsCampaignEntry;
+  Idx: Integer;  }
 begin
   Resp := GAds.RunCampaignsQuery();
-  Idx := 0;
+{  Idx := 0;
   for Camp in Resp do
-  begin
-    Memo1.Lines.Add(Format('%d - %s%s', [Idx, Camp.GetInsertQuery(), sLineBreak]));
-  end;
+    begin
+        Memo1.Lines.Add(Format('%d - %s%s', [Idx, Camp.GetInsertQuery(), sLineBreak]));
+          end;}
 
   GAds.SaveCampaigns(Resp);
+  Memo1.Lines.Add('Sucesso');
+end;
+
+procedure TForm1.Button2Click(Sender: TObject);
+begin
+  Memo1.Lines.Add(GAds.DatabaseResources);
 end;
 
 end.

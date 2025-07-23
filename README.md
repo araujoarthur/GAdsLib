@@ -17,9 +17,34 @@ Currently holds strong dependencies on the FireDac Library.
 
 - [ ] Create custom library exceptions and swap all ``Exception.Create()`` calls with meaningful, contextualized, exceptions.
 
+- [ ] Handle the invalid type on ´RunCampaignsQuery´.
+
+- [ ] Fill types from ´GAdsLib.Utils.Types´ with data from a Query result set too.
+
+- [ ] Hunt memory leaks (I really tend to forget about that while working with JSON and remember soo later on)
+
 
 # Still Gotta Test:
 (or atleast what I remember I have to)
 
 - [ ] New load from file for DB secrets
 - [ ] New load from file for API secrets
+
+
+constructor TGAdsCampaigns.TGAdsCampaignsEnumerator.Create(
+  AParent: TGAdsCampaigns);
+begin
+  FIndex := 0;
+  FParent := AParent;
+end;
+
+function TGAdsCampaignsEnumerator.GetCurrent: U;
+begin
+  Result := FParent.FCAMPAIGNS[FIndex];
+end;
+
+function TGAdsCampaigns.TGAdsCampaignsEnumerator.MoveNext: Boolean;
+begin
+  Inc(FIndex);
+  Result := FIndex < FParent.Count;
+end;

@@ -7,6 +7,30 @@ uses FireDAC.Comp.Client, System.JSON, System.SysUtils, System.Classes;
 type
 
   ///  <summary>
+  ///  Interface base para as coleções da biblioteca GAdsLib.
+  ///  </summary>
+  IGAdsCollection<T> = interface
+    ['{B12B4BD6-4530-4400-9B64-9CB885E70564}']
+    function GetItem(Index: Integer): T;
+    function GetCount(): Integer;
+    property Count: Integer read GetCount;
+  end;
+
+  ///  <summary>
+  ///  Classe enumeradora das coleções da biblioteca GAdsLib.
+  ///  </summary>
+  TGAdsCollectionEnumerator<U> = class
+  private
+    FCollection: IGAdsCollection<U>;
+    FIndex: Integer;
+  public
+    constructor Create(const ACollection: IGAdsCollection<U>);
+    function GetCurrent(): U;
+    function MoveNext(): Boolean;
+    property Current: U read GetCurrent;
+  end;
+
+  ///  <summary>
   ///  Representa uma única campanha retornada pela API ou armazenada no banco de dados (WIP).
   ///  </summary>
   TGAdsCampaignEntry = record
@@ -14,6 +38,7 @@ type
     RESOURCE_NAME: String;
     NOME: String;
     STATUS: String;
+    TIPO_CANAL: String;
     BUDGET_RESOURCE_NAME: String;
     ORCAMENTO: Int64;
     ORCAMENTO_STATUS: String;
@@ -23,7 +48,7 @@ type
     ///  <summary>
     ///  Cria uma nova estrutura com as informações recebidas
     ///  </summary>
-    class function New(AID: Int64; AResourceName, ANome, AStatus, ABudgetResourceName: String;
+    class function New(AID: Int64; AResourceName, ANome, AStatus, ATipoCanal, ABudgetResourceName: String;
                         AOrcamento: Int64; AOrcamentoStatus: String; ADataAtualizado, ADataInserido: TDateTime): TGAdsCampaignEntry; static;
 
     ///  <summary>
@@ -37,49 +62,39 @@ type
     ///  <remarks>
     ///  O objeto em questão deve ser especifícamente uma única entrada da array results fornecida pela API.
     ///  </remarks>
-    class function NewFromJSON(AJSON: TJSONObject): TGAdsCampaignEntry; static;
-
-    ///  <summary>
-    ///  Retorna uma string SQL formatada para inserção ou atualização da entrada em questão no banco de dados.
-    ///  </summary>
-    function GetInsertQuery(): String;
+    class function NewFromJSON(const AJSON: TJSONObject): TGAdsCampaignEntry; static;
 
   end;
 
   ///  <summary>
-  ///  Representa uma coleção de campanhas retornada pela API do Google Ads ou armazenada no banco de dados (WIP)
+  ///  Coleção de campanhas retornada pela API do Google Ads ou armazenada no banco de dados (WIP).
+  ///  Esta classe implementa a interface <see cref="IGAdsCollection<T>"/> para o tipo concreto <see cref="TGAdsCampaignEntry"/>.
   ///  <summary>
-  TGAdsCampaigns = class
+  TGAdsCampaigns = class(TObject, IGAdsCollection<TGAdsCampaignEntry>)
   private
-    FCAMPAIGNS: array of TGAdsCampaignEntry;
+    FCampaigns: array of TGAdsCampaignEntry;
 
     constructor Create;
-    function GetCampaignsCount: Integer;
+    function GetCount: Integer;
     function GetCampaign(Index: Integer): TGAdsCampaignEntry;
+    function GetItem(Index: Integer): TGAdsCampaignEntry;
 
-  ///  <summary>
-  ///   Classe enumeradora da coleção <see cref="TGAdsCampaigns"/>.
-  ///  </summary>
-  public type TGAdsCampaignsEnumerator = class
-    private
-      FParent: TGAdsCampaigns;
-      FIndex: Integer;
-    public
-      constructor Create(AParent: TGAdsCampaigns);
-      function GetCurrent(): TGAdsCampaignEntry;
-      function MoveNext(): Boolean;
-      property Current: TGAdsCampaignEntry read GetCurrent;
-  end;
-
+    // Declare some COM methods to disable reference counting for this interfaced object.
+    // This is needed here because I needed a way to bypass the limitations of generics in Delphi.
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function _AddRef(): Integer; stdcall;
+    function _Release(): Integer; stdcall;
   public
     ///  <summary>
     ///  Quantidade de elementos na coleção.
     ///  </summary>
-    property Count: Integer read GetCampaignsCount;
+    property Count: Integer read GetCount;
     ///  <summary>
     ///  Acesso indexado aos elementos da coleção.
     ///  </summary>
     property Campaigns[Index: Integer]: TGAdsCampaignEntry read GetCampaign;
+
+    destructor Destroy; override;
 
     ///  <summary>
     ///  Copia uma coleção de campanhas do resultado de uma query SQL (WIP).
@@ -106,18 +121,80 @@ type
     ///  <returns>
     ///  Instância de <see cref="TGAdsCampaigns"/> contendo todas as campanhas de <i>AQuery</i>.
     ///  </returns>
-    class function CopyFromJSON(AJSON: TJSONArray): TGAdsCampaigns; static;
+    class function CopyFromJSON(const AJSON: TJSONArray): TGAdsCampaigns; static;
 
     ///  <summary>
     ///  Habilita a coleção a ser utilizada em <i>loops</i> do tipo <c>for ... in ...</c>
     ///  </summary>
-    function GetEnumerator(): TGAdsCampaignsEnumerator;
+    function GetEnumerator(): TGAdsCollectionEnumerator<TGAdsCampaignEntry>;
 
+  end;
+
+  ///  <summary>
+  ///  Representa um único produto retornado pela API do Google Ads ou armazenado no banco de dados (WIP).
+  ///  </summary>
+  TGAdsProductEntry = record
+    SKU: String;
+    ID_CAMPANHA: Int64;
+    TITULO: String;
+    LABEL_PRODUTO: String;
+    METRICAS_CLIQUES: Integer;
+    METRICAS_VALOR_CONVERSOES: Double;
+    METRICAS_CONVERSOES: Double;
+    METRICAS_CUSTO: Int64;
+    METRICAS_TODAS_CONVERSOES: Double;
+    METRICAS_IMPRESSOES: Integer;
+    DATA_ATUALIZADO: TDateTime;
+    DATA_INSERIDO: TDateTime;
+
+    ///  <summary>
+    ///  Cria uma nova estrutura com as informações recebidas
+    ///  </summary>
+    class function New(ASKU: String; AID_Campanha: Int64; ATitulo: String;
+      ALabel: String; AMetricasCliques: Integer; AMetricasValorConversoes,
+      AMetricasConversoes: Double; AMetricasCusto: Int64;
+      AMetricasTodasConversoes: Double; AMetricasImpressoes: Integer;
+      ADataAtualizado, ADataInserido: TDateTime): TGAdsProductEntry; static;
+
+    /// <summary>
+    /// Cria uma nova estrutura vazia.
+    ///  </summary>
+    class function EmptyNew(): TGAdsProductEntry; static;
+
+    ///  <summary>
+    ///   Cria uma nova estrutura a partir de um objeto JSON retornado pela API.
+    ///  </summary>
+    ///  <remarks>
+    ///  O objeto em questão deve ser especifícamente uma única entrada da array results fornecida pela API.
+    ///  </remarks>
+    class function NewFromJSON(const AJSON: TJSONObject): TGAdsProductEntry; static;
+
+  end;
+
+  ///  <summary>
+  ///  Coleção de Produtos Retornados pela API ou armazenados no banco de dados (WIP).
+  ///  </summary>
+  TGAdsProducts = class(TObject, IGAdsCollection<TGAdsProductEntry>)
+  private
+    FProducts: array of TGAdsProductEntry;
+
+    function GetCount(): Integer;
+    function GetItem(Index: Integer): TGAdsProductEntry;
+
+    // IInterface methods declaration to override reference counting.
+    function _AddRef(): Integer; stdcall;
+    function _Release(): Integer; stdcall;
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function GetProduct(Index: Integer): TGAdsProductEntry;
+  public
+    property Count: Integer read GetCount;
+    property Products[Index: Integer]: TGAdsProductEntry read GetProduct;
   end;
 
   const
     GADS_UT_EMPTY_INTEGER = -1;
     GADS_UT_EMPTY_STRING = '';
+    GADS_UT_EMPTY_DOUBLE = -1.0;
     GADS_UT_EMPTY_DATETIME = 0.0;
 
 implementation
@@ -125,7 +202,7 @@ implementation
 { TGAdsCampaigns }
 
 // must pass the results array here.
-class function TGAdsCampaigns.CopyFromJSON(AJSON: TJSONArray): TGAdsCampaigns;
+class function TGAdsCampaigns.CopyFromJSON(const AJSON: TJSONArray): TGAdsCampaigns;
 var
   Val: TJSONValue;
   Obj: TJSONObject;
@@ -180,26 +257,55 @@ begin
   SetLength(FCAMPAIGNS, 0);
 end;
 
+destructor TGAdsCampaigns.Destroy;
+begin
+
+  inherited;
+end;
+
 function TGAdsCampaigns.GetCampaign(Index: Integer): TGAdsCampaignEntry;
 begin
 
-  if (Index < 0) or (Index >= Length(FCAMPAIGNS)) then
+  if (Index < 0) or (Index >= Length(FCampaigns)) then
   begin
-    raise EListError.Create('Indice excede os limites');
+    raise Exception.Create('Indice excede os limites');
   end;
 
-  Result := FCAMPAIGNS[Index];
-  
+  Result := FCampaigns[Index];
+
 end;
 
-function TGAdsCampaigns.GetCampaignsCount: Integer;
+function TGAdsCampaigns.GetCount: Integer;
 begin
   Result := Length(Self.FCAMPAIGNS);
 end;
 
-function TGAdsCampaigns.GetEnumerator: TGAdsCampaignsEnumerator;
+function TGAdsCampaigns.GetEnumerator: TGAdsCollectionEnumerator<TGAdsCampaignEntry>;
 begin
-  Result := TGAdsCampaignsEnumerator.Create(Self);
+  Result := TGAdsCollectionEnumerator<TGAdsCampaignEntry>.Create(Self);
+end;
+
+function TGAdsCampaigns.GetItem(Index: Integer): TGAdsCampaignEntry;
+begin
+  Result := Self.GetCampaign(Index);
+end;
+
+function TGAdsCampaigns.QueryInterface(const IID: TGUID; out Obj): HResult;
+begin
+  if GetInterface(IID, Obj) then
+    Result := S_OK
+  else
+    Result := E_NOINTERFACE;
+end;
+
+function TGAdsCampaigns._AddRef: Integer;
+begin
+  Result := -1;
+end;
+
+function TGAdsCampaigns._Release: Integer;
+begin
+  Result := -1;
 end;
 
 { TGAdsCampaignEntry }
@@ -211,33 +317,15 @@ begin
   GADS_UT_EMPTY_STRING,
   GADS_UT_EMPTY_STRING,
   GADS_UT_EMPTY_STRING,
+  GADS_UT_EMPTY_STRING,
   GADS_UT_EMPTY_INTEGER,
   GADS_UT_EMPTY_STRING,
   GADS_UT_EMPTY_DATETIME,
   GADS_UT_EMPTY_DATETIME);
 end;
 
-function TGAdsCampaignEntry.GetInsertQuery: String;
-var
-  InsertValues: String;
-const
-  InsertQuery = 'UPDATE OR INSERT INTO gads_campanhas (%s) VALUES (%s) MATCHING (%s)';
-  InsertFields = 'id, resource_name, nome, status, budget_resource_name, orcamento, orcamento_status, data_atualizado';
-begin
-  InsertValues := Format('%d, ''%s'', ''%s'', ''%s'', ''%s'', %s, ''%s'', ''%s''', [ID, 
-  RESOURCE_NAME,
-  NOME,
-  STATUS,
-  BUDGET_RESOURCE_NAME,
-  IntToStr(ORCAMENTO),
-  ORCAMENTO_STATUS,
-  FormatDateTime('yyyy-mm-dd hh:nn:ss', Now())]);
-  
-  Result := Format(InsertQuery, [InsertFields, InsertValues,'id']);
-end;
-
 class function TGAdsCampaignEntry.New(AID: Int64; AResourceName, ANome, AStatus,
-  ABudgetResourceName: String; AOrcamento: Int64; AOrcamentoStatus: String;
+  ATipoCanal, ABudgetResourceName: String; AOrcamento: Int64; AOrcamentoStatus: String;
   ADataAtualizado, ADataInserido: TDateTime): TGAdsCampaignEntry;
 begin
   Result.ID := AID;
@@ -245,13 +333,15 @@ begin
   Result.NOME := ANome;
   Result.BUDGET_RESOURCE_NAME := ABudgetResourceName;
   Result.ORCAMENTO := AOrcamento;
+  Result.STATUS := AStatus;
+  Result.TIPO_CANAL := ATipoCanal;
   Result.ORCAMENTO_STATUS := AOrcamentoStatus;
   Result.DATA_ATUALIZADO := ADataAtualizado;
   Result.DATA_INSERIDO := ADataInserido;
 end;
 
 class function TGAdsCampaignEntry.NewFromJSON(
-  AJSON: TJSONObject): TGAdsCampaignEntry;
+  const AJSON: TJSONObject): TGAdsCampaignEntry;
 var
   CampaignObject: TJSONObject;
   BudgetObject: TJSONObject;
@@ -267,6 +357,7 @@ begin
   Success := Success and CampaignObject.TryGetValue<String>('resourceName', Result.RESOURCE_NAME);
   Success := Success and CampaignObject.TryGetValue<String>('status', Result.STATUS);
   Success := Success and CampaignObject.TryGetValue<String>('name', Result.NOME);
+  Success := Success and CampaignObject.TryGetValue<String>('advertisingChannelType', Result.TIPO_CANAL);
 
   // Extracting Budget Data
   Success := Success and BudgetObject.TryGetValue<String>('resourceName', Result.BUDGET_RESOURCE_NAME);
@@ -276,27 +367,144 @@ begin
   if not Success then
     raise Exception.Create('O objeto não é uma campanha válida.');
 
-  
+
 end;
 
 { TGAdsCampaigns.TGAdsCampaignsEnumerator }
 
-constructor TGAdsCampaigns.TGAdsCampaignsEnumerator.Create(
-  AParent: TGAdsCampaigns);
+
+
+{ TGAdsCampaignsEnumerator<T, U> }
+
+constructor TGAdsCollectionEnumerator<U>.Create(const ACollection: IGAdsCollection<U>);
 begin
   FIndex := 0;
-  FParent := AParent;
+  FCollection := ACollection;
 end;
 
-function TGAdsCampaigns.TGAdsCampaignsEnumerator.GetCurrent: TGAdsCampaignEntry;
+function TGAdsCollectionEnumerator<U>.GetCurrent: U;
 begin
-  Result := FParent.FCAMPAIGNS[FIndex];
+  Result := FCollection.GetItem(FIndex);
 end;
 
-function TGAdsCampaigns.TGAdsCampaignsEnumerator.MoveNext: Boolean;
+function TGAdsCollectionEnumerator<U>.MoveNext: Boolean;
 begin
   Inc(FIndex);
-  Result := FIndex < FParent.Count;
+  Result := FIndex < FCollection.Count;
+end;
+
+{ TGAdsProducts }
+
+function TGAdsProducts.GetCount: Integer;
+begin
+  Result := Length(FProducts);
+end;
+
+function TGAdsProducts.GetItem(Index: Integer): TGAdsProductEntry;
+begin
+  Result := Self.GetProduct(Index);
+end;
+
+function TGAdsProducts.GetProduct(Index: Integer): TGAdsProductEntry;
+begin
+  if (Index < 0) or (Index >= Length(FProducts)) then
+  begin
+    raise Exception.Create('Indice excede os limites');
+  end;
+
+  Result := FProducts[Index];
+end;
+
+function TGAdsProducts.QueryInterface(const IID: TGUID; out Obj): HResult;
+begin
+  if GetInterface(IID, Obj) then
+    Result := S_OK
+  else
+    Result := E_NOINTERFACE;
+end;
+
+function TGAdsProducts._AddRef: Integer;
+begin
+  Result := -1;
+end;
+
+function TGAdsProducts._Release: Integer;
+begin
+  Result := -1;
+end;
+
+{ TGAdsProductEntry }
+
+class function TGAdsProductEntry.EmptyNew: TGAdsProductEntry;
+begin
+  Result := TGAdsProductEntry.New(GADS_UT_EMPTY_STRING,    //SKU
+  GADS_UT_EMPTY_INTEGER,  // Id campanha
+  GADS_UT_EMPTY_STRING,   // Titulo
+  GADS_UT_EMPTY_STRING,   // Label
+  GADS_UT_EMPTY_INTEGER,  // Cliques
+  GADS_UT_EMPTY_DOUBLE,   // ValorConversoes
+  GADS_UT_EMPTY_DOUBLE,   // Conversoes
+  GADS_UT_EMPTY_INTEGER,  // Custo
+  GADS_UT_EMPTY_DOUBLE,   // TodasConversoes
+  GADS_UT_EMPTY_INTEGER,  // Impressoes
+  GADS_UT_EMPTY_DATETIME,
+  GADS_UT_EMPTY_DATETIME);
+end;
+
+class function TGAdsProductEntry.New(ASKU: String; AID_Campanha: Int64; ATitulo,
+  ALabel: String; AMetricasCliques: Integer; AMetricasValorConversoes,
+  AMetricasConversoes: Double; AMetricasCusto: Int64;
+  AMetricasTodasConversoes: Double; AMetricasImpressoes: Integer;
+  ADataAtualizado, ADataInserido: TDateTime): TGAdsProductEntry;
+begin
+  Result.SKU := ASKU;
+  Result.ID_CAMPANHA := AID_Campanha;
+  Result.TITULO := ATitulo;
+  Result.LABEL_PRODUTO := ALabel;
+  Result.METRICAS_CLIQUES := AMetricasCliques;
+  Result.METRICAS_VALOR_CONVERSOES := AMetricasValorConversoes;
+  Result.METRICAS_CONVERSOES := AMetricasConversoes;
+  Result.METRICAS_CUSTO := AMetricasCusto;
+  Result.METRICAS_TODAS_CONVERSOES := AMetricasTodasConversoes;
+  Result.METRICAS_IMPRESSOES := AMetricasImpressoes;
+  Result.DATA_ATUALIZADO := ADataAtualizado;
+  Result.DATA_INSERIDO := ADataInserido;
+end;
+
+class function TGAdsProductEntry.NewFromJSON(const
+  AJSON: TJSONObject): TGAdsProductEntry;
+var
+  CampaignObject, MetricsObject, SegmentsObject: TJSONObject;
+  Success: Boolean;
+begin
+  if not (
+    AJSON.TryGetValue<TJSONObject>('campaign', CampaignObject) and
+    AJSON.TryGetValue<TJSONObject>('metrics', MetricsObject) and
+    AJSON.TryGetValue<TJSONObject>('segments', SegmentsObject)
+  ) then
+    raise Exception.Create('O objeto não é uma entrada de produto valida');
+
+  Success := True;
+
+  // Extracting Segments Data
+  Success := Success and SegmentsObject.TryGetValue<String>('productItemId', Result.SKU);
+  Success := Success and SegmentsObject.TryGetValue<String>('productTitle', Result.TITULO);
+  Result.LABEL_PRODUTO := SegmentsObject.GetValue<String>('productFeedLabel', '');
+
+  // Extracting Campaign Data
+  Success := Success and CampaignObject.TryGetValue<Int64>('id', Result.ID_CAMPANHA);
+
+  // Extracting Metrics Data
+  Success := Success and MetricsObject.TryGetValue<Integer>('clicks', Result.METRICAS_CLIQUES);
+  Success := Success and MetricsObject.TryGetValue<Double>('conversionsValue', Result.METRICAS_VALOR_CONVERSOES);
+  Success := Success and MetricsObject.TryGetValue<Double>('conversions', Result.METRICAS_CONVERSOES);
+  Success := Success and MetricsObject.TryGetValue<Int64>('costMicros', Result.METRICAS_CUSTO);
+  Success := Success and MetricsObject.TryGetValue<Double>('allConversions', Result.METRICAS_TODAS_CONVERSOES);
+  Success := Success and MetricsObject.TryGetValue<Integer>('impressions', Result.METRICAS_IMPRESSOES);
+
+  if not Success then
+    raise Exception.Create('O objeto não é uma entrada de produto válida');
+
 end;
 
 end.

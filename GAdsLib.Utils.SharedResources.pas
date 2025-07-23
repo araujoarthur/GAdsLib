@@ -35,6 +35,14 @@ type
     ///  </returns>
     class function FromJSONObject(AObject: TJSONObject): TGAdsSharedResources; static;
 
+    ///  <summary>
+    ///  Permite a visualização da estrutura em forma de texto.
+    ///  </summary>
+    ///  <returns>
+    ///  String contendo as informações presentes na estrutura.
+    ///  </returns>
+    function ToString(): String;
+
   end;
 
   ///  <summary>
@@ -57,6 +65,14 @@ type
     ///  Instância de <see cref="TDatabaseSharedResources"/> com as informações existentes no arquivo.
     ///  </returns>
     class function FromFile(APath: String): TDatabaseSharedResources; static;
+
+    ///  <summary>
+    ///  Permite a visualização da estrutura em forma de texto.
+    ///  </summary>
+    ///  <returns>
+    ///  String contendo as informações presentes na estrutura.
+    ///  </returns>
+    function ToString(): String;
 
   end;
 
@@ -115,6 +131,20 @@ begin
   Result := Format(Serializable, [ClientID, ClientSecret, RefreshToken, CustomerID, LoginCustomerID, DeveloperToken, AccessToken, AccessTokenExpiryAt, RefreshTokenExpiryAt])
 end;
 
+function TGAdsSharedResources.ToString: String;
+begin
+  Result := Format('ClientID: %s%sClientSecret: %s%sRefreshToken: %s%sCustomerID: %s%sLoginCustomerID: %s%sDeveloperToken: %s%sAccesdsToken: %s%sAccessTokenExpiryAt: %d%sRefreshTokenExpiryAt: %s',
+  [ClientID, sLineBreak,
+   ClientSecret, sLineBreak,
+   RefreshToken, sLineBreak,
+   CustomerID, sLineBreak,
+   LoginCustomerID,
+   DeveloperToken, sLineBreak,
+   AccessToken, sLineBreak,
+   AccessTokenExpiryAt, sLineBreak,
+   RefreshTokenExpiryAt, sLineBreak]);
+end;
+
 { TDatabaseSharedResources }
 
 class function TDatabaseSharedResources.FromFile(
@@ -131,6 +161,11 @@ begin
   Result.Password := IniFile.ReadString('database', 'password', '');
   Result.Address := IniFile.ReadString('database', 'address', '');
   Result.Path := IniFile.ReadString('database', 'path', '');
+end;
+
+function TDatabaseSharedResources.ToString: String;
+begin
+  Result := Format('Username: %s%sPassword: %s%sAddress: %s%sPath: %s', [Username, sLineBreak, Password, sLineBreak, Address, sLineBreak, Path]);
 end;
 
 end.

@@ -49,6 +49,8 @@ type
     procedure EnforceConformity();
 
     procedure DoRefreshToken();
+    procedure LoadAccessFromFile(AFilePath: String; AStrict: Boolean = False);
+    function GetDatabaseResources: String;
   public
     {$IFDEF DEBUG}
     function GetLatestResponse(): String;
@@ -66,11 +68,12 @@ type
     property RefreshTokenExpiryAt:  Int64   read FREFRESH_TOKEN_EXPIRY_AT;
     property AccessTokenExpiryAt:   Int64   read FACCESS_TOKEN_EXPIRY_AT;
     property ExpirationThreshold:   Int64   read FEXPIRATION_THRESHOLD  write FEXPIRATION_THRESHOLD;
+    property DatabaseResources:     String  read GetDatabaseResources;
 
     constructor Create(AClientID, AClientSecret, ARefreshToken, ACustomerID, ALoginCustomerID, ADeveloperToken: String); overload;
     constructor Create(APath: String); overload;
     // Deve ser utilizado apenas para primeira inicialização e testes.
-    procedure LoadAccessFromFile(AFilePath: String);
+
     procedure LoadAccessFromDB();
     function RunSearchStreamQuery(AQuery: String): TJSONValue;
     function RunCampaignsQuery(): TGAdsCampaigns;
@@ -267,6 +270,11 @@ begin
 end;
 
 {$IFDEF DEBUG}
+function TGoogleAds.GetDatabaseResources: String;
+begin
+  Result := FDATABASE_RESOURCES.ToString();
+end;
+
 function TGoogleAds.GetLatestHeaders: TArray<TNameValuePair>;
 begin
   Result := FLatestHeaders;
@@ -297,7 +305,7 @@ begin
 
 end;
 
-procedure TGoogleAds.LoadAccessFromFile(AFilePath: String);
+procedure TGoogleAds.LoadAccessFromFile(AFilePath: String; AStrict:Boolean = False);
 var
   IniFile: TIniFile;
 begin
@@ -307,7 +315,7 @@ begin
   IniFile := TIniFile.Create(AFilePath);
   FACCESS_TOKEN := IniFile.ReadString('GAdsLib', 'accessToken', '');
 
-  if FACCESS_TOKEN = '' then
+  if (FACCESS_TOKEN = '') and AStrict then
     raise Exception.Create('Access Token não encontrado no arquivo "'+AFilePath+'".');
 
   // Tenta recuperar um refresh token novo, se houver.
@@ -317,7 +325,7 @@ begin
   FREFRESH_TOKEN_EXPIRY_AT := IniFile.ReadInteger('GAdsLib', 'refreshTokenExpiryAt', -1);
   FACCESS_TOKEN_EXPIRY_AT := IniFile.ReadInteger('GAdsLib', 'accessTokenExpiryAt', -1);
 
-  if (FREFRESH_TOKEN_EXPIRY_AT = -1) or (FACCESS_TOKEN_EXPIRY_AT = -1) then
+  if ((FREFRESH_TOKEN_EXPIRY_AT = -1) or (FACCESS_TOKEN_EXPIRY_AT = -1)) and AStrict then
     raise Exception.Create('Expiração dos tokens não encontrada');
 end;
 
@@ -336,7 +344,7 @@ var
   ResponseArray, ResultsArray: TJSONArray;
 
 const
-  GQLQuery = 'SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, campaign_budget.status FROM campaign WHERE campaign.advertising_channel_type = ''SHOPPING''';
+  GQLQuery = 'SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, campaign_budget.status, campaign.advertising_channel_type FROM campaign WHERE campaign.advertising_channel_type IN (''SHOPPING'', ''PERFORMANCE_MAX'')';
 
 begin
   Response := Self.RunSearchStreamQuery(GQLQuery);
