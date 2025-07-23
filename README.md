@@ -16,3 +16,10 @@ Currently holds strong dependencies on the FireDac Library.
 - [ ] Interact with the products view from the reporting aspect of the API.
 
 - [ ] Create custom library exceptions and swap all ``Exception.Create()`` calls with meaningful, contextualized, exceptions.
+
+
+# Still Gotta Test:
+(or atleast what I remember I have to)
+
+- [ ] New load from file for DB secrets
+- [ ] New load from file for API secrets
