@@ -27,8 +27,8 @@ Currently holds strong dependencies on the FireDac Library.
 # Still Gotta Test:
 (or atleast what I remember I have to)
 
-- [ ] New load from file for DB secrets
-- [ ] New load from file for API secrets
+- [x] New load from file for DB secrets
+- [x] New load from file for API secrets
 
 
 constructor TGAdsCampaigns.TGAdsCampaignsEnumerator.Create(
