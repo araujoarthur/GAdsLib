@@ -5,6 +5,9 @@ interface
 uses System.JSON;
 
 type
+  ///  <summary>
+  ///   Armazena as informações pertinentes ao acesso à API Google Ads.
+  ///  </summary>
   TGAdsSharedResources = record
     ClientID: String;
     ClientSecret: String;
@@ -16,17 +19,45 @@ type
     AccessTokenExpiryAt: Int64;
     RefreshTokenExpiryAt: Int64;
 
+    ///  <summary>
+    ///  Serializa a estrutura em questão para armazenamento no banco de dados.
+    ///  </summary>
+    ///  <returns>
+    ///  String contendo a representação da estrutura em JSON.
+    ///  </returns>
     function Serialize(): String;
+
+    ///  <summary>
+    ///  Tenta obter as informações para preencher a estrutura a partir de um objeto JSON.
+    ///  </summary>
+    ///  <returns>
+    ///  Instância de <see cref="TGAdsSharedResources"/> com as informações disponíveis no objeto de entrada.
+    ///  </returns>
     class function FromJSONObject(AObject: TJSONObject): TGAdsSharedResources; static;
+
   end;
 
+  ///  <summary>
+  ///   Armazena as informações pertinentes ao acesso ao Banco de Dados.
+  ///  </summary>
   TDatabaseSharedResources = record
     Username: String;
     Password: String;
     Address: String;
     Path: String;
 
+    ///  <summary>
+    ///   Obtem as informações para preencher a estrutura a partir de um arquivo <c>.ini</c>.
+    ///  </summary>
+    ///  <remarks>
+    ///  O arquivo deve existir previamente, caso contrário será levantada uma Exception.
+    ///  </remarks>
+    ///  <exception cref="...">Caso o arquivo não exista</exception>
+    ///  <returns>
+    ///  Instância de <see cref="TDatabaseSharedResources"/> com as informações existentes no arquivo.
+    ///  </returns>
     class function FromFile(APath: String): TDatabaseSharedResources; static;
+
   end;
 
   const

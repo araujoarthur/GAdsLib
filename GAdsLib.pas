@@ -7,6 +7,9 @@ uses
   GAdsLib.Utils.SharedResources, GAdsLib.Utils.Types;
 
 type
+  ///  <summary>
+  ///  Classe de abstração da interação com a API do Google Ads.
+  ///  </summary>
   TGoogleAds = class
   private
     // User Provided Fields
@@ -49,6 +52,7 @@ type
   public
     {$IFDEF DEBUG}
     function GetLatestResponse(): String;
+    function GetLatestHeaders(): TArray<TNameValuePair>;
     {$ENDIF}
 
 
@@ -85,7 +89,7 @@ const
 implementation
 
 uses
-  VCL.Dialogs, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error,
+  System.Generics.Collections, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error,
   FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
   FireDAC.Phys, FireDAC.VCLUI.Wait, Data.DB, FireDAC.Comp.Client,
   FireDAC.Phys.FB, FireDAC.Phys.FBDef, FireDAC.Stan.Param, FireDAC.DatS,
@@ -263,6 +267,11 @@ begin
 end;
 
 {$IFDEF DEBUG}
+function TGoogleAds.GetLatestHeaders: TArray<TNameValuePair>;
+begin
+  Result := FLatestHeaders;
+end;
+
 function TGoogleAds.GetLatestResponse: String;
 begin
   Result := FLatestResponse;

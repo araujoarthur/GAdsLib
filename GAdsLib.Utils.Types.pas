@@ -6,6 +6,9 @@ uses FireDAC.Comp.Client, System.JSON, System.SysUtils, System.Classes;
 
 type
 
+  ///  <summary>
+  ///  Representa uma única campanha retornada pela API ou armazenada no banco de dados (WIP).
+  ///  </summary>
   TGAdsCampaignEntry = record
     ID: Int64;
     RESOURCE_NAME: String;
@@ -16,15 +19,36 @@ type
     ORCAMENTO_STATUS: String;
     DATA_ATUALIZADO: TDateTime;
     DATA_INSERIDO: TDateTime;
-    
+
+    ///  <summary>
+    ///  Cria uma nova estrutura com as informações recebidas
+    ///  </summary>
     class function New(AID: Int64; AResourceName, ANome, AStatus, ABudgetResourceName: String;
                         AOrcamento: Int64; AOrcamentoStatus: String; ADataAtualizado, ADataInserido: TDateTime): TGAdsCampaignEntry; static;
 
+    ///  <summary>
+    ///  Cria uma nova estrutura vazia.
+    ///  </summary>
     class function EmptyNew(): TGAdsCampaignEntry; static;
+
+    ///  <summary>
+    ///   Cria uma nova estrutura a partir de um objeto JSON retornado pela API.
+    ///  </summary>
+    ///  <remarks>
+    ///  O objeto em questão deve ser especifícamente uma única entrada da array results fornecida pela API.
+    ///  </remarks>
     class function NewFromJSON(AJSON: TJSONObject): TGAdsCampaignEntry; static;
+
+    ///  <summary>
+    ///  Retorna uma string SQL formatada para inserção ou atualização da entrada em questão no banco de dados.
+    ///  </summary>
     function GetInsertQuery(): String;
+
   end;
 
+  ///  <summary>
+  ///  Representa uma coleção de campanhas retornada pela API do Google Ads ou armazenada no banco de dados (WIP)
+  ///  <summary>
   TGAdsCampaigns = class
   private
     FCAMPAIGNS: array of TGAdsCampaignEntry;
@@ -32,7 +56,10 @@ type
     constructor Create;
     function GetCampaignsCount: Integer;
     function GetCampaign(Index: Integer): TGAdsCampaignEntry;
-    
+
+  ///  <summary>
+  ///   Classe enumeradora da coleção <see cref="TGAdsCampaigns"/>.
+  ///  </summary>
   public type TGAdsCampaignsEnumerator = class
     private
       FParent: TGAdsCampaigns;
@@ -45,13 +72,47 @@ type
   end;
 
   public
-  
+    ///  <summary>
+    ///  Quantidade de elementos na coleção.
+    ///  </summary>
     property Count: Integer read GetCampaignsCount;
+    ///  <summary>
+    ///  Acesso indexado aos elementos da coleção.
+    ///  </summary>
     property Campaigns[Index: Integer]: TGAdsCampaignEntry read GetCampaign;
+
+    ///  <summary>
+    ///  Copia uma coleção de campanhas do resultado de uma query SQL (WIP).
+    ///  </summary>
+    ///  <param name="AQuery">
+    ///  Instância da query que contém os resultados a serem copiados. A query <b>deve</b> estar aberta.
+    ///  </param>
+    ///  <returns>
+    ///  Instância de <see cref="TGAdsCampaigns"/> contendo todas as campanhas de <i>AQuery</i>.
+    ///  </returns>
     class function CopyFromQuery(AQuery: TFDQuery): TGAdsCampaigns; static;
+
+    ///  <summary>
+    ///  Copia uma coleção de campanhas de uma array JSON.
+    ///  </summary>
+    ///  <param name="AQuery">
+    ///  Instância de <see cref="TJSONArray"/> que contem as infomrmações a serem copiadas.
+    ///  </param>
+    ///  <remarks>
+    ///  Atualmente, a API responde uma array com um único objeto que contém, entre outros,
+    ///   o campo <i>results</i>. Essa função espera receber a array armazenada no campo <i>results</i>, e não a
+    ///   array respondida pela API diretamente.
+    ///  </remarks>
+    ///  <returns>
+    ///  Instância de <see cref="TGAdsCampaigns"/> contendo todas as campanhas de <i>AQuery</i>.
+    ///  </returns>
     class function CopyFromJSON(AJSON: TJSONArray): TGAdsCampaigns; static;
 
+    ///  <summary>
+    ///  Habilita a coleção a ser utilizada em <i>loops</i> do tipo <c>for ... in ...</c>
+    ///  </summary>
     function GetEnumerator(): TGAdsCampaignsEnumerator;
+
   end;
 
   const
@@ -80,7 +141,7 @@ begin
 
     Obj := TJSONObject(Val);
     Campaign := TGAdsCampaignEntry.NewFromJSON(Obj);
-    
+
     Len := Length(Result.FCAMPAIGNS);
     SetLength(Result.FCAMPAIGNS, Len+1);
     Result.FCAMPAIGNS[Len] := Campaign;
