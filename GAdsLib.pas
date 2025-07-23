@@ -72,10 +72,11 @@ type
 
     constructor Create(AClientID, AClientSecret, ARefreshToken, ACustomerID, ALoginCustomerID, ADeveloperToken: String); overload;
     constructor Create(APath: String); overload;
-    // Deve ser utilizado apenas para primeira inicialização e testes.
 
     procedure LoadAccessFromDB();
     function RunSearchStreamQuery(AQuery: String): TJSONValue;
+
+    // Domain Specific Functions
     function RunCampaignsQuery(): TGAdsCampaigns;
     procedure SaveCampaigns(ACampaigns: TGAdsCampaigns);
   end;
