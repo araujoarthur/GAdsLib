@@ -78,7 +78,9 @@ type
 
     // Domain Specific Functions
     function RunCampaignsQuery(): TGAdsCampaigns;
+    function RunShoppingViewQuery(): TGAdsProducts;
     procedure SaveCampaigns(ACampaigns: TGAdsCampaigns);
+    procedure SaveShoppingView(AProducts: TGAdsProducts);
   end;
 
 const
@@ -343,11 +345,17 @@ var
   Response: TJSONValue;
   ResponseObject: TJSONObject;
   ResponseArray, ResultsArray: TJSONArray;
-
+{$IF CompilerVersion < 34}
+  GQLQuery: String;
+{$ELSE}
 const
   GQLQuery = 'SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, campaign_budget.status, campaign.advertising_channel_type FROM campaign WHERE campaign.advertising_channel_type IN (''SHOPPING'', ''PERFORMANCE_MAX'')';
-
+{$ENDIF}
 begin
+  {$IF CompilerVersion < 34}
+    GQLQuery := 'SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros, campaign_budget.status, '+
+    'campaign.advertising_channel_type FROM campaign WHERE campaign.advertising_channel_type IN (''SHOPPING'', ''PERFORMANCE_MAX'')';
+  {$ENDIF}
   Response := Self.RunSearchStreamQuery(GQLQuery);
   try
     if (Response is TJSONObject) then
@@ -401,14 +409,67 @@ begin
   Exit(nil);
 end;
 
+function TGoogleAds.RunShoppingViewQuery: TGAdsProducts;
+var
+  Response: TJSONValue;
+  ResponseObject: TJSONObject;
+  ResponseArray, ResultsArray: TJSONArray;
+  {$IF CompilerVersion < 34.0}
+  GQLQuery: String;
+  {$ELSE}
+const
+  GQLQuery = 'SELECT segments.product_item_id, segments.product_feed_label, segments.product_title, campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.cost_micros, metrics.conversions, metrics.all_conversions, metrics.conversions_value, campaign.advertising_channel_type FROM shopping_performance_view WHERE campaign.status = ''ENABLED''';
+  {$ENDIF}
+begin
+  {$IF CompilerVersion < 34.0}
+    GQLQuery := 'SELECT segments.product_item_id, segments.product_feed_label, segments.product_title, campaign.id, campaign.name,'+
+    ' campaign.status, metrics.clicks, metrics.impressions, metrics.cost_micros, metrics.conversions, metrics.all_conversions, '+
+    'metrics.conversions_value, campaign.advertising_channel_type FROM shopping_performance_view WHERE campaign.status = ''ENABLED''';
+  {$ENDIF}
+
+  Response := Self.RunSearchStreamQuery(GQLQuery);
+  try
+    if (Response is TJSONObject) then
+    begin
+      // Deal with error;
+      Exit(nil);
+    end;
+
+    if not (Response is TJSONArray) then
+      raise Exception.Create('Erro Desconhecido ao Executar Query: ' + Response.ToString);
+
+    ResponseArray := TJSONArray(Response);
+    ResponseObject := TJSONObject(ResponseArray.Items[0]);
+
+    if not ResponseObject.TryGetValue<TJSONArray>('results', ResultsArray) then
+      raise Exception.Create('Formato JSON inesperado');
+
+    Result := TGAdsProducts.CopyFromJSON(ResultsArray);
+  finally
+    Response.Free;
+  end;
+end;
+
 procedure TGoogleAds.SaveCampaigns(ACampaigns: TGAdsCampaigns);
 var
   Conn: TFDConnection;
   Query: TFDQuery;
   Idx: Integer;
-const
+  {$IF CompilerVersion < 34}
+  IUQuery: String;
+  {$ELSE}
+  const
   IUQuery = 'UPDATE OR INSERT INTO gads_campanhas (id, resource_name, nome, status, budget_resource_name, orcamento, orcamento_status, data_atualizado) VALUES (:id, :resource_name, :nome, :status, :budget_resource_name, :orcamento, :orcamento_status, :data_atualizado) MATCHING (id)';
+  {$ENDIF}
+
 begin
+
+  {$IF CompilerVersion < 34}
+    IUQuery := 'UPDATE OR INSERT INTO gads_campanhas (id, resource_name, nome, status, budget_resource_name, orcamento,'+
+    'orcamento_status, data_atualizado) VALUES (:id, :resource_name, :nome, :status, :budget_resource_name, :orcamento,'+
+    ' :orcamento_status, :data_atualizado) MATCHING (id)';
+  {$ENDIF}
+
   Conn := TFDConnection.Create(nil);
   Query := TFDQuery.Create(nil);
   try
@@ -425,7 +486,7 @@ begin
       Query.SQL.Text := IUQuery;
 
       Query.Params.ArraySize := ACampaigns.Count;
-      
+
       for Idx := 0 to (ACampaigns.Count - 1) do
       begin
         Query.Params[0].AsLargeInts[Idx] := ACampaigns.Campaigns[Idx].ID;                   // ID
@@ -437,9 +498,9 @@ begin
         Query.Params[6].AsStrings[Idx] := ACampaigns.Campaigns[Idx].ORCAMENTO_STATUS;       // Orcamento Status
         Query.Params[7].AsDateTimes[Idx] := Now();                                          // Data Atualizado
       end;
-        
+
       Query.Execute(ACampaigns.Count, 0);
-      
+
       Conn.Commit;
     except on E: Exception do
       begin
@@ -447,7 +508,7 @@ begin
         raise;
       end;
     end;
-    
+
   finally
     Query.Close;
     Query.Free;
@@ -480,6 +541,76 @@ begin
     Query.Free;
     Conn.Connected := False;
     Conn.Close;
+  end;
+end;
+
+procedure TGoogleAds.SaveShoppingView(AProducts: TGAdsProducts);
+var
+  Conn: TFDConnection;
+  Query: TFDQuery;
+  Idx: Integer;
+{$IF CompilerVersion < 34.0}
+  IUQuery: String;
+{$ELSE}
+const
+  IUQuery = 'UPDATE OR INSERT INTO gads_produtos(sku, id_campanha, titulo,label_produto, metricas_cliques, metricas_valor_conversoes, metricas_conversoes, metricas_custo, metricas_todas_conversoes, metricas_impressoes, data_atualizado) VALUES (:sku, :id_campanha, :titulo, :label_produto, :metricas_cliques, :metricas_valor_conversoes, :metricas_conversoes, :metricas_custo, :metricas_todas_conversoes, :metricas_impressoes, :data_atualizado) MATCHING (sku, id_campanha)';
+{$ENDIF}
+
+begin
+
+  {$IF CompilerVersion < 34.0}
+   IUQuery := 'UPDATE OR INSERT INTO gads_produtos(sku, id_campanha, titulo,label_produto, metricas_cliques,'+
+   ' metricas_valor_conversoes, metricas_conversoes, metricas_custo, metricas_todas_conversoes, metricas_impressoes, data_atualizado)'+
+   ' VALUES (:sku, :id_campanha, :titulo, :label_produto, :metricas_cliques, :metricas_valor_conversoes, :metricas_conversoes, '+
+   ':metricas_custo, :metricas_todas_conversoes, :metricas_impressoes, :data_atualizado) MATCHING (sku, id_campanha)';
+  {$ENDIF}
+
+  Conn := TFDConnection.Create(nil);
+  Query := TFDQuery.Create(nil);
+  try
+
+    Conn.Params.DriverID := 'FB';
+    Conn.Params.Database := FDATABASE_RESOURCES.Path;
+    Conn.Params.Username := FDATABASE_RESOURCES.Username;
+    Conn.Params.Password := FDATABASE_RESOURCES.Password;
+    Conn.Params.Add(Format('Server=%s', [FDATABASE_RESOURCES.Address]));
+
+    Query.Connection := Conn;
+    Conn.StartTransaction();
+    try
+      Query.SQL.Text := IUQuery;
+
+      Query.Params.ArraySize := AProducts.Count;
+
+      for Idx := 0 to (AProducts.Count - 1) do
+      begin
+        Query.Params[0].AsStrings[Idx]    := AProducts.Products[Idx].SKU;  // sku
+        Query.Params[1].AsLargeInts[Idx]  := AProducts.Products[Idx].ID_CAMPANHA; // id campanha
+        Query.Params[2].AsStrings[Idx]    := AProducts.Products[Idx].TITULO; // Titulo
+        Query.Params[3].AsStrings[Idx]    := AProducts.Products[Idx].LABEL_PRODUTO; // labelProduto
+        Query.Params[4].AsIntegers[Idx]   := AProducts.Products[Idx].METRICAS_CLIQUES;
+        Query.Params[5].AsFloats[Idx]     := AProducts.Products[Idx].METRICAS_VALOR_CONVERSOES;
+        Query.Params[6].AsFloats[Idx]     := AProducts.Products[Idx].METRICAS_CONVERSOES;
+        Query.Params[7].AsLargeInts[Idx]  := AProducts.Products[Idx].METRICAS_CUSTO;
+        Query.Params[8].AsFloats[Idx]     := AProducts.Products[Idx].METRICAS_TODAS_CONVERSOES;
+        Query.Params[9].AsFloats[Idx]     := AProducts.Products[Idx].METRICAS_IMPRESSOES;
+        Query.Params[10].AsDateTimes[Idx] := Now();
+      end;
+
+      Query.Execute(AProducts.Count, 0);
+
+      Conn.Commit;
+    except on E: Exception do
+      begin
+        Conn.Rollback;
+        raise;
+      end;
+    end;
+  finally
+    Query.Close;
+    Query.Free;
+    Conn.Connected := False;
+    Conn.Free;
   end;
 end;
 

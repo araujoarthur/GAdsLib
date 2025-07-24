@@ -20,10 +20,12 @@ type
     edtQuery: TLabeledEdit;
     Button1: TButton;
     Button2: TButton;
+    Button3: TButton;
     procedure btnCreateGAdsClick(Sender: TObject);
     procedure btnSerializeClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -74,12 +76,33 @@ begin
           end;}
 
   GAds.SaveCampaigns(Resp);
-  Memo1.Lines.Add('Sucesso');
+  Memo1.Lines.Add('Sucess C Qry');
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
 begin
   Memo1.Lines.Add(GAds.DatabaseResources);
+end;
+
+procedure TForm1.Button3Click(Sender: TObject);
+var
+  Resp: TGAdsProducts;
+  Prod: TGAdsProductEntry;
+  Idx: Integer;
+begin
+  Resp := GAds.RunShoppingViewQuery();
+  Idx := 0;
+  for Prod in Resp do
+  begin
+    Memo1.Lines.Add('Rec No. ' + IntToStr(Idx));
+    Memo1.Lines.Add(Prod.ToString());
+    Memo1.Lines.Add('');
+    Inc(Idx);
+  end;
+
+  GAds.SaveShoppingView(Resp);
+  Memo1.Lines.Add('Success P Qry');
+
 end;
 
 end.

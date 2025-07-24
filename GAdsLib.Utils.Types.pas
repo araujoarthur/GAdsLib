@@ -169,6 +169,9 @@ type
     ///  </remarks>
     class function NewFromJSON(const AJSON: TJSONObject): TGAdsProductEntry; static;
 
+    class function IsJSONValid(const AJSON: TJSONValue): Boolean; static;
+
+    function ToString(): String;
   end;
 
   ///  <summary>
@@ -178,8 +181,13 @@ type
   private
     FProducts: array of TGAdsProductEntry;
 
+    constructor Create();
+
+    
+
     function GetCount(): Integer;
     function GetItem(Index: Integer): TGAdsProductEntry;
+
 
     // IInterface methods declaration to override reference counting.
     function _AddRef(): Integer; stdcall;
@@ -189,6 +197,9 @@ type
   public
     property Count: Integer read GetCount;
     property Products[Index: Integer]: TGAdsProductEntry read GetProduct;
+    
+    function GetEnumerator(): TGAdsCollectionEnumerator<TGAdsProductEntry>;
+    class function CopyFromJSON(AJSON: TJSONArray): TGAdsProducts; static;
   end;
 
   const
@@ -395,9 +406,42 @@ end;
 
 { TGAdsProducts }
 
+class function TGAdsProducts.CopyFromJSON(AJSON: TJSONArray): TGAdsProducts;
+var
+  Val: TJSONValue;
+  Obj: TJSONObject;
+  Product: TGAdsProductEntry;
+  Len: Integer;
+begin
+  Result := TGAdsProducts.Create();
+
+  for Val in AJSON do
+  begin
+    if not TGAdsProductEntry.IsJSONValid(Val) then
+      continue;
+
+    Obj := TJSONObject(Val);
+    Product := TGAdsProductEntry.NewFromJSON(Obj);
+
+    Len := Length(Result.FProducts);
+    SetLength(Result.FProducts, Len + 1);
+    Result.FProducts[Len] := Product;    
+  end;
+end;
+
+constructor TGAdsProducts.Create;
+begin
+  SetLength(FProducts, 0);
+end;
+
 function TGAdsProducts.GetCount: Integer;
 begin
   Result := Length(FProducts);
+end;
+
+function TGAdsProducts.GetEnumerator: TGAdsCollectionEnumerator<TGAdsProductEntry>;
+begin
+  Result := TGAdsCollectionEnumerator<TGAdsProductEntry>.Create(Self);
 end;
 
 function TGAdsProducts.GetItem(Index: Integer): TGAdsProductEntry;
@@ -449,6 +493,79 @@ begin
   GADS_UT_EMPTY_INTEGER,  // Impressoes
   GADS_UT_EMPTY_DATETIME,
   GADS_UT_EMPTY_DATETIME);
+end;
+
+class function TGAdsProductEntry.IsJSONValid(const AJSON: TJSONValue): Boolean;
+var
+  Obj, SubObj: TJSONObject;
+  DumperI64: Int64;
+  DumperInt: Integer;
+  DumperStr: String;
+  DumperDouble: Double;
+
+begin
+  if not (AJSON is TJSONObject) then
+    Exit(False);
+
+  
+  Obj := TJSONObject(AJSON);
+  with Obj do
+  begin
+  
+    // Check if the object has a Campaign object
+    if not TryGetvalue<TJSONObject>('campaign', SubObj) then
+      Exit(False);
+
+    // Check if the object campaign has the required subfields
+    with SubObj do
+    begin
+      if not TryGetValue<Int64>('id', DumperI64) then
+        Exit(False);
+    end;
+
+    // Check if the object has a Metrics object
+    if not TryGetValue<TJSONObject>('metrics', SubObj) then
+      Exit(False);
+
+    // Check if the metrics object has the required subfields
+    with SubObj do
+    begin
+      if not TryGetValue<Integer>('clicks', DumperInt) then
+        Exit(False);
+
+      if not TryGetValue<Double>('conversionsValue', DumperDouble) then
+        Exit(False);
+
+      if not TryGetValue<Double>('conversions', DumperDouble) then
+        Exit(False);
+
+      if not TryGetValue<Int64>('costMicros', DumperI64) then
+        Exit(False);
+
+      if not TryGetValue<Double>('allConversions', DumperDouble) then
+        Exit(False);
+
+      if not TryGetValue<Integer>('impressions', DumperInt) then
+        Exit(False);
+    end;
+
+    // Check if the object has a Segments object
+    if not TryGetValue<TJSONObject>('segments', SubObj) then
+      Exit(False);
+
+    // Check if SubObj has a product id field
+    with SubObj do
+    begin
+      if not TryGetValue<String>('productItemId', DumperStr) then
+        Exit(False);
+
+      if not TryGetValue<String>('productTitle', DumperStr) then
+        Exit(False);
+    end;
+  end;
+
+  Exit(True);
+
 end;
 
 class function TGAdsProductEntry.New(ASKU: String; AID_Campanha: Int64; ATitulo,
@@ -505,6 +622,22 @@ begin
   if not Success then
     raise Exception.Create('O objeto não é uma entrada de produto válida');
 
+end;
+
+function TGAdsProductEntry.ToString: String;
+begin
+  Result := Format('SKU: %s%sproductTitle: %s%sproductLabel: %s%scampaignId: %d%sclicks: %d%sconversionsValue: %f%sconversions: %f%scostMicros: %d%sallConversions: %f%simpressions: %d', [
+    SKU, sLineBreak,
+    TITULO, sLineBreak,
+    LABEL_PRODUTO, sLineBreak,
+    ID_CAMPANHA, sLineBreak,
+    METRICAS_CLIQUES, sLineBreak,
+    METRICAS_VALOR_CONVERSOES, sLineBreak,
+    METRICAS_CONVERSOES, sLineBreak,
+    METRICAS_CUSTO, sLineBreak,
+    METRICAS_TODAS_CONVERSOES, sLineBreak,
+    METRICAS_IMPRESSOES
+  ]);
 end;
 
 end.

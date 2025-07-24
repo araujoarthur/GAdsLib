@@ -216,7 +216,7 @@ object Form1: TForm1
     Margins.Top = 7
     Margins.Right = 7
     Margins.Bottom = 7
-    Caption = 'Run Query'
+    Caption = 'Run C Query'
     TabOrder = 11
     OnClick = Button1Click
   end
@@ -232,5 +232,18 @@ object Form1: TForm1
     Caption = 'Button2'
     TabOrder = 12
     OnClick = Button2Click
+  end
+  object Button3: TButton
+    Left = 517
+    Top = 364
+    Width = 169
+    Height = 56
+    Margins.Left = 7
+    Margins.Top = 7
+    Margins.Right = 7
+    Margins.Bottom = 7
+    Caption = 'Run P Query'
+    TabOrder = 13
+    OnClick = Button3Click
   end
 end
